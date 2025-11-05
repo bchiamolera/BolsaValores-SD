@@ -10,11 +10,11 @@ spring:
   # === MongoDB ===
   data:
     mongodb:
-      uri: link_mongo_atlas
+      uri: ""
 
   # === RabbitMQ ===
   rabbitmq:
-    uri: link_cloudamqp
+    uri: ""
     listener:
       simple:
         concurrency: 1
@@ -29,4 +29,4 @@ logging:
   level:
     root: INFO
     org.springframework.web: INFO
-    com.bolsas.monitoramento: DEBUG
+    com.furb.bolsavalores: DEBUG
