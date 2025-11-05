@@ -10,16 +10,11 @@ spring:
   # === MongoDB ===
   data:
     mongodb:
-      host: localhost
-      port: 27017
-      database: bolsa-valores
-      username: admin # Substituir
-      password: admin123 # Substituir
-      authentication-database: admin # Substituir
+      uri: link_mongo
 
   # === RabbitMQ ===
   rabbitmq:
-    uri: "url-cloud-amqp" # Substituir
+    uri: link_cloudamqp
     listener:
       simple:
         concurrency: 1
