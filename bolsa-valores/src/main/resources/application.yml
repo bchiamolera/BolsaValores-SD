@@ -1,0 +1,45 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: bolsa-valores
+
+  # === MongoDB ===
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: bolsa-valores
+      username: admin # Substituir
+      password: admin123 # Substituir
+      authentication-database: admin # Substituir
+
+  # === RabbitMQ ===
+  rabbitmq:
+    uri: "url-cloud-amqp" # Substituir
+    listener:
+      simple:
+        concurrency: 1
+        max-concurrency: 5
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 2s
+
+# === Logs ===
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    com.bolsas.monitoramento: DEBUG
+
+# === Configurações customizadas (opcional) ===
+bolsa:
+  exchange: bolsa.exchange
+  queue: cotacoes_bolsa
+  routing-key: bolsa.cotacao.#
+  apis:
+    b3: "https://api.exemplo.com/b3"
