@@ -1,7 +1,10 @@
 server:
-  port: 8080
+  port: 0
   servlet:
     context-path: /api
+
+cluster:
+  known-ports: "8081,8082,8083"
 
 spring:
   application:
@@ -10,19 +13,24 @@ spring:
   # === MongoDB ===
   data:
     mongodb:
-      uri: ""
+      uri: "mongodb+srv://bchiamolera:Max060523@cluster0.85mqpdy.mongodb.net/bolsa-valores?retryWrites=true&w=majority"
 
   # === RabbitMQ ===
   rabbitmq:
-    uri: ""
+    addresses: amqps://jackal.rmq.cloudamqp.com:5671
+    username: tjonmisa
+    password: Y7nP6069Ovl7R5vGHTiuK7IaIAHl2RJh
+    virtual-host: tjonmisa
+    ssl:
+      enabled: true
     listener:
       simple:
+        acknowledge-mode: auto
         concurrency: 1
-        max-concurrency: 5
-        retry:
-          enabled: true
-          max-attempts: 3
-          initial-interval: 2s
+        auto-startup: true
+    connection-timeout: 5000
+    dynamic: true
+
 
 # === Logs ===
 logging:
