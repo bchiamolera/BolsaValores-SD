@@ -13,23 +13,16 @@ spring:
   # === MongoDB ===
   data:
     mongodb:
-      uri: "mongodb+srv://bchiamolera:Max060523@cluster0.85mqpdy.mongodb.net/bolsa-valores?retryWrites=true&w=majority"
+      uri: "${MONGODB_URI_BOLSAVALORES}"
 
   # === RabbitMQ ===
   rabbitmq:
-    addresses: amqps://jackal.rmq.cloudamqp.com:5671
-    username: tjonmisa
-    password: Y7nP6069Ovl7R5vGHTiuK7IaIAHl2RJh
-    virtual-host: tjonmisa
+    addresses: "${RABBITMQ_ADDRESSES_BOLSAVALORES}"
     ssl:
       enabled: true
     listener:
       simple:
         acknowledge-mode: auto
-        concurrency: 1
-        auto-startup: true
-    connection-timeout: 5000
-    dynamic: true
 
 
 # === Logs ===

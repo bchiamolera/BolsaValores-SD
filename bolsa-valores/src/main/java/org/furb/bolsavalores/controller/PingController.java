@@ -3,9 +3,11 @@ package org.furb.bolsavalores.controller;
 import org.furb.bolsavalores.service.ElectionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/status")
 public class PingController {
     private final ElectionService electionService;
 
@@ -27,5 +29,10 @@ public class PingController {
     public ResponseEntity<String> leader() {
         String leader = electionService.getCurrentLeaderPort();
         return ResponseEntity.ok(leader == null ? "none" : leader);
+    }
+
+    @GetMapping()
+    public ResponseEntity<String> status() {
+        return ResponseEntity.ok(electionService.isLeader() ? "leader" : "follower");
     }
 }

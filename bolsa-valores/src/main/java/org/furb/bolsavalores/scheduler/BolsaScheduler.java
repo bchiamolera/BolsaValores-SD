@@ -37,5 +37,6 @@ public class BolsaScheduler {
 
                     rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_ACOES, "bolsa.acao." + ticker.toLowerCase(), acao);
                 });
+        System.out.println("Ações de " + ticker + " atualizadas com sucesso!");
     }
 }

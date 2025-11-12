@@ -1,6 +1,7 @@
 package org.furb.bolsavalores.service;
 
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import org.furb.bolsavalores.config.RabbitMQConfig;
 import org.furb.bolsavalores.model.ElectionMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -16,14 +17,13 @@ import java.util.concurrent.*;
 public class ElectionService {
     private final RabbitTemplate rabbitTemplate;
     private final List<String> knownNodes;
-    private final String myPort;
-    private final long myStartTime;
-    private Map<String, CompletableFuture<Boolean>> electionFutures = new ConcurrentHashMap<>();
 
-    private volatile boolean isLeader = false;
-    private volatile String currentLeaderPort = null;
+    @Getter private final String myPort;
+    @Getter private final long myStartTime;
+    @Getter volatile boolean isLeader = false;
+    @Getter volatile String currentLeaderPort = null;
 
-    // configurable
+    private final Map<String, CompletableFuture<Boolean>> electionFutures = new ConcurrentHashMap<>();
     private final long OK_WAIT_MS = 3000;
 
     public ElectionService(RabbitTemplate rabbitTemplate,
@@ -33,15 +33,6 @@ public class ElectionService {
         this.knownNodes = parsePorts(knownPortsCsv);
         this.myPort = myPort;
         this.myStartTime = Instant.now().toEpochMilli();
-    }
-
-    public void sendToProcess(String targetPort, String message) {
-        rabbitTemplate.convertAndSend(
-                "election.exchange",
-                "process." + targetPort,
-                message
-        );
-        System.out.println("Enviado para process." + targetPort + ": " + message);
     }
 
     private List<String> parsePorts(String csv) {
@@ -59,7 +50,7 @@ public class ElectionService {
     }
 
     public synchronized void startElection() {
-        System.out.println("🔍 [" + myPort + "] Iniciando eleição (startTime=" + myStartTime + ")");
+        System.out.println("[" + myPort + "] Iniciando eleição (startTime=" + myStartTime + ")");
         isLeader = false;
         currentLeaderPort = null;
 
@@ -67,7 +58,6 @@ public class ElectionService {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         electionFutures.put(electionId, future);
 
-        // envia ELECTION para todos os outros nós
         for (String targetPort : knownNodes) {
             if (targetPort.equals(myPort)) continue;
             ElectionMessage msg = new ElectionMessage();
@@ -81,30 +71,23 @@ public class ElectionService {
             System.out.println("[" + myPort + "] ELECTION -> process." + targetPort);
         }
 
-        // aguarda se algum OK chegar
         try {
             boolean gotOk = future.get(OK_WAIT_MS, TimeUnit.MILLISECONDS);
             if (gotOk) {
                 System.out.println("[" + myPort + "] Recebeu OK; aguardando COORDINATOR...");
-                // aguarda que outro processo anuncie COORDINATOR
-                // se nenhum COORDINATOR chegar em intervalo maior, podemos reiniciar eleição (não implementado aqui)
             } else {
-                // não deveria chegar false, mas tratamos abaixo
                 becomeLeader();
             }
         } catch (TimeoutException te) {
-            // nenhum OK - posso me tornar líder
             becomeLeader();
         } catch (Exception ex) {
             ex.printStackTrace();
-            // falha: torna-se leader para evitar indecisão (ou poderia reiniciar)
             becomeLeader();
         } finally {
             electionFutures.remove(electionId);
         }
     }
 
-    // chamado quando receber OK
     public void onOk(String electionId) {
         CompletableFuture<Boolean> f = electionFutures.get(electionId);
         if (f != null && !f.isDone()) {
@@ -112,7 +95,6 @@ public class ElectionService {
         }
     }
 
-    // quando receber COORDINATOR via fanout
     public void onCoordinator(String leaderPort) {
         this.currentLeaderPort = leaderPort;
         boolean leaderIsMe = myPort.equals(leaderPort);
@@ -124,7 +106,6 @@ public class ElectionService {
         this.isLeader = true;
         this.currentLeaderPort = myPort;
         System.out.println("[" + myPort + "] Tornou-se líder!");
-        // broadcast COORDINATOR
         ElectionMessage coord = new ElectionMessage();
         coord.setType(ElectionMessage.Type.COORDINATOR);
         coord.setSenderPort(myPort);
@@ -135,11 +116,8 @@ public class ElectionService {
         System.out.println("[" + myPort + "] Broadcast COORDINATOR");
     }
 
-    // quando receber ELECTION - chamamos isso a partir do listener
     public void onElectionReceived(ElectionMessage msg) {
-        // compare startTimes: menor startTime => mais antigo => maior prioridade
         if (this.myStartTime < msg.getSenderStartTime()) {
-            // sou mais velho -> respondo OK e inicio minha própria eleição
             System.out.println("[" + myPort + "] Sou mais velho que " + msg.getSenderPort() + " -> respondo OK");
             ElectionMessage ok = new ElectionMessage();
             ok.setElectionId(msg.getElectionId());
@@ -147,31 +125,12 @@ public class ElectionService {
             ok.setSenderPort(myPort);
             ok.setSenderStartTime(myStartTime);
 
-            // send OK directly to the initiator
             rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_ELECTION,
                     "process." + msg.getSenderPort(), ok);
 
-            // iniciar nova eleição para declarar se for o mais velho absoluto
             Executors.newSingleThreadScheduledExecutor().schedule(this::startElection, 200, TimeUnit.MILLISECONDS);
         } else {
-            // sou mais novo -> ignoro
             System.out.println("[" + myPort + "] Sou mais novo que " + msg.getSenderPort() + " -> ignoro");
         }
-    }
-
-    public boolean isLeader() {
-        return isLeader;
-    }
-
-    public String getCurrentLeaderPort() {
-        return currentLeaderPort;
-    }
-
-    public String getMyPort() {
-        return myPort;
-    }
-
-    public long getMyStartTime() {
-        return myStartTime;
     }
 }
