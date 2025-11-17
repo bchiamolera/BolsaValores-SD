@@ -8,6 +8,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+
 @Component
 public class BolsaScheduler {
     private final ConsultaBolsaService consultaBolsaService;
@@ -33,7 +35,7 @@ public class BolsaScheduler {
                     acao.setShortName(response.getShortName());
                     acao.setLongName(response.getLongName());
                     acao.setRegularMarketPrice(response.getRegularMarketPrice());
-                    acao.setRegularMarketTime(response.getRegularMarketTime());
+                    acao.setRegularMarketTime(Instant.parse(response.getRegularMarketTime()));
 
                     rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_ACOES, "bolsa.acoes." + ticker.toLowerCase(), acao);
                 });

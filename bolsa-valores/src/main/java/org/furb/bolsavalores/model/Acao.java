@@ -6,6 +6,8 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Instant;
+
 @Data
 @Getter
 @Setter
@@ -13,10 +15,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Acao {
     @Id
     private String id;
-
     private String symbol;
     private String shortName;
     private String longName;
     private double regularMarketPrice;
-    private String regularMarketTime;
+    private Instant regularMarketTime;
 }
