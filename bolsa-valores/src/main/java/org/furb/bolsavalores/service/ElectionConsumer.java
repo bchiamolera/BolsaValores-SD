@@ -5,10 +5,10 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ElectionListener {
+public class ElectionConsumer {
     private final ElectionService electionService;
 
-    public ElectionListener(ElectionService electionService) {
+    public ElectionConsumer(ElectionService electionService) {
         this.electionService = electionService;
     }
 

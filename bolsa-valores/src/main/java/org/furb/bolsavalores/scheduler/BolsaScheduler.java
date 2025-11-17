@@ -20,7 +20,7 @@ public class BolsaScheduler {
         this.electionService = electionService;
     }
 
-    @Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 0)
+    @Scheduled(fixedRate = 30 * 1000, initialDelay = 5 * 1000)
     public void atualizarCotacaoAutomatica() {
         if (electionService.isLeader()) return;
 
@@ -35,8 +35,9 @@ public class BolsaScheduler {
                     acao.setRegularMarketPrice(response.getRegularMarketPrice());
                     acao.setRegularMarketTime(response.getRegularMarketTime());
 
-                    rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_ACOES, "bolsa.acao." + ticker.toLowerCase(), acao);
+                    rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_ACOES, "bolsa.acoes." + ticker.toLowerCase(), acao);
                 });
         System.out.println("Ações de " + ticker + " atualizadas com sucesso!");
+        electionService.pingLeader();
     }
 }

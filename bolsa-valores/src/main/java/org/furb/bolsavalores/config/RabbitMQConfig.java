@@ -1,6 +1,8 @@
 package org.furb.bolsavalores.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -9,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     public static final String EXCHANGE_ACOES = "bolsa.acoes.exchange";
-    public static final String QUEUE_ACOES = "acoes_bolsa";
+    public static final String QUEUE_ACOES = "acoes";
     public static final String ROUTING_KEY_ACOES = "bolsa.acoes.#";
 
     public static final String EXCHANGE_ELECTION = "eleicao.exchange";
@@ -24,7 +26,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue electionQueue(@Value("${server.port}") String port) {
-        return new Queue(QUEUE_ELECTION + "." + port, false);
+        return new Queue(QUEUE_ELECTION + "." + port, false, true, true);
     }
 
     @Bean
@@ -60,5 +62,15 @@ public class RabbitMQConfig {
     @Bean
     public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory manualAckContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jackson2JsonMessageConverter());
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL); // 👈 somente essa usa manual
+        factory.setPrefetchCount(1);
+        return factory;
     }
 }

@@ -7,6 +7,7 @@ import org.furb.bolsavalores.model.ElectionMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.*;
 import java.time.Instant;
@@ -25,6 +26,7 @@ public class ElectionService {
 
     private final Map<String, CompletableFuture<Boolean>> electionFutures = new ConcurrentHashMap<>();
     private final long OK_WAIT_MS = 3000;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public ElectionService(RabbitTemplate rabbitTemplate,
                            @Value("${cluster.known-ports}") String knownPortsCsv,
@@ -45,8 +47,32 @@ public class ElectionService {
 
     @PostConstruct
     public void init() {
-        Executors.newSingleThreadScheduledExecutor()
-                .schedule(this::startElection, 1, TimeUnit.SECONDS);
+        Executors.newSingleThreadScheduledExecutor().schedule(() -> {
+                if (!tryFindLeader()) startElection();
+            }, 1, TimeUnit.SECONDS);
+    }
+
+    private boolean tryFindLeader() {
+        System.out.println("[" + myPort + "] Procurando o líder atual...");
+        for (String node : knownNodes) {
+            if (node.equals(myPort)) continue;
+            try {
+                String url = "http://localhost:" + node + "/api/status";
+                String status = restTemplate.getForObject(url, String.class);
+
+                if ("leader".equalsIgnoreCase(status)) {
+                    this.currentLeaderPort = node;
+                    this.isLeader = false;
+                    System.out.println("[" + myPort + "] líder encontrado! Porta " + node);
+                    return true;
+                }
+            }
+            catch (Exception e) {
+                System.err.println("[" + myPort + "] erro ao dar ping na porta " + node + ": " + e.getMessage());
+            }
+        }
+        System.out.println("[" + myPort + "] Líder não encontrado");
+        return false;
     }
 
     public synchronized void startElection() {
@@ -131,6 +157,28 @@ public class ElectionService {
             Executors.newSingleThreadScheduledExecutor().schedule(this::startElection, 200, TimeUnit.MILLISECONDS);
         } else {
             System.out.println("[" + myPort + "] Sou mais novo que " + msg.getSenderPort() + " -> ignoro");
+        }
+    }
+
+    public void pingLeader() {
+        if (currentLeaderPort == null) {
+            System.out.println("[" + myPort + "] Nenhum líder ativo, iniciando eleição...");
+            startElection();
+            return;
+        }
+
+        if (isLeader) return;
+
+        try {
+            String leaderUrl = "http://localhost:" + currentLeaderPort + "/api/status/ping";
+            String response = restTemplate.getForObject(leaderUrl, String.class);
+            if (!"alive".equalsIgnoreCase(response)) {
+                throw new RuntimeException("Resposta inesperada do líder: " + response);
+            }
+            System.out.println("[" + myPort + "] Líder " + currentLeaderPort + " está ativo.");
+        } catch (Exception e) {
+            System.out.println("[" + myPort + "] Líder " + currentLeaderPort + " não responde — iniciando nova eleição.");
+            startElection();
         }
     }
 }
