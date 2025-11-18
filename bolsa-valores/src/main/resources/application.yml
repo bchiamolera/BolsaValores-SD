@@ -3,6 +3,10 @@ server:
   servlet:
     context-path: /api
 
+app:
+  api: "brapi"
+  ticker: "PETR4"
+
 cluster:
   known-ports: "8081,8082,8083"
 
